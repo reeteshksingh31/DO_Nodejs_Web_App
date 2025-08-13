@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-deployment
+  labels:
+    app: nodejs
+spec:
+  replicas: 1  # Let HPA control scaling
+  selector:
+    matchLabels:
+      app: nodejs
+  template:
+    metadata:
+      labels:
+        app: nodejs
+    spec:
+      containers:
+      - name: mywebapp
+        image: reeteshsingh31/nodejs:myfirstimage
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m        # Minimum CPU reserved for HPA calculations
+            memory: 100Mi
+          limits:
+            cpu: 200m        # Max CPU per pod
+            memory: 200Mi
+
