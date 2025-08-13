@@ -1,127 +1,135 @@
 # DO_Nodejs_Web_App
 
-🚀 **SaaS Web Application Deployment on Kubernetes – Case Study ( Digital Ocean )**
+🚀 **Web Application Deployment on DigitalOcean Kubernetes**
 
-📌 Overview
+---
 
-This project demonstrates the end-to-end deployment of a containerized web application for a SaaS company, aligning with their strategic priorities:
+## 📌 Overview
 
-    1. Scalability – Handle increased workloads as the user base grows.
-    2. Performance – Maintain fast response times even under load.
-    3. Reliability – Deliver high availability with minimal downtime.
-    4. Cost Optimization – Use cloud resources efficiently without sacrificing  performance.
+This repository contains NodeJs containerized web application deployment on Digital Ocean Kubernetes cluster(DOKS).
 
-The deployment leverages Docker, DigitalOcean K8's ,Load Balancer and Horizontal Pod Autoscaling.
+This Deployment leverages
 
+```md
 
-📁 Project Structure
+- ✅ Docker-based containerization.  
+- ✅ Kubernetes deployment and service manifests  
+- ✅ LoadBalancer to expose the app publicly.  
+- ✅ Horizontal Pod Autoscaler (HPA) – Automatically scales pods based on CPU usage.  
+- ✅ Cluster autoscaling configured during cluster creation (min 2, max 3 nodes)  
+```
 
+---
+
+## 📁 Project Structure
+
+```plaintext
 .
-├── index.html           # Static webpage
+├── app.js               # NodeJs App
+├── package.json         # NodeJs app dependency file
 ├── Dockerfile           # Docker build instructions
 ├── deployment.yaml      # Kubernetes Deployment manifest
 ├── service.yaml         # Kubernetes LoadBalancer Service manifest
+├── hpa.yaml             # Horizontal Pod Autoscaler manifest
+````
 
+---
 
+## 📋 Prerequisites
 
+* [DigitalOcean Account](https://www.digitalocean.com/)
+* Docker (installed & running locally)
+* Docker Hub Account (for hosting container images)
+* `doctl` – DigitalOcean CLI
+* `kubectl` – Kubernetes CLI
+* Metrics Server installed on the Kubernetes cluster
 
-📋 **Prerequisites**
+---
 
-    1. DigitalOcean Account – [Sign up](https://www.digitalocean.com/)
-    2. Docker – Installed & running locally
-    3. Docker Hub Account – For hosting container images
-    4. doctl – DigitalOcean
-    5. kubectl – Kubernetes CLI
-    6. Metrics Server – Installed on the Kubernetes cluster
+## 📦 Step-by-Step Deployment Guide
 
+### **1️⃣ Clone the Repository**
 
-📦 Step-by-Step Deployment Guide
+```bash
+git clone https://github.com/reeteshksingh31/DO_Nodejs_Web_App.git
+cd DO_Nodejs_Web_App
+```
 
-    1️. Clone the Repository
+### **2️⃣ Build & Push Docker Image**
 
-    `git clone https://github.com/reeteshksingh31/DO_Nodejs_Web_App.git
-    cd DO_Nodejs_Web_App`
+```bash
+docker build -t reeteshsingh31/nodejs:newimage .
+docker push reeteshsingh31/nodejs:newimage
+```
 
-     Build & Push Docker Image
+### **3️⃣ Create Kubernetes Cluster on DigitalOcean & Authenticate**
 
-    # Build Docker image
-    docker build -t reeteshsingh31/nodejs:newimage .
+Create the cluster with autoscaling enabled:
 
-    # Push to Docker Hub
-    docker push reeteshsingh31/nodejs:newimage
-    
+```bash
+doctl kubernetes cluster create web-app-cluster \
+  --region <region> \
+  --version <k8s-version> \
+  --min-nodes 2 \
+  --max-nodes 3 \
+  --count 2 \
+  --enable-autoscaling
+```
 
-    2️⃣ Create Kubernetes Cluster on DigitalOcean & Authenticate
+Authenticate with `doctl`:
 
-    1. Create a Kubernetes Cluster via [DigitalOcean Control Panel]
-        Region: Closest to user base
-        Node Pool: 2 nodes (auto-scale enabled: min 2, max 3)
-        Kubernetes version: Latest stable
+```bash
+doctl auth init
+```
 
-    2. Generate DigitalOcean API Token:
-        Go to: **Account → Applications & API → Generate New Token
-        Copy the generated token and store it safely.
+Save kubeconfig:
 
-    3. Authenticate with doctl:
+```bash
+doctl kubernetes cluster kubeconfig save <cluster-name>
+```
 
-        doctl auth init [ Paste your API token when prompted ]
+Verify cluster access:
 
-    4. Connect to your cluster:
+```bash
+kubectl get nodes
+```
 
-        doctl kubernetes cluster kubeconfig save <cluster_name>
+### **4️⃣ Deploy Application**
 
-    5. Verify connection:
+```bash
+kubectl apply -f deployment.yaml
+kubectl get pods
+```
 
-        kubectl get nodes
+### **5️⃣ Create LoadBalancer Service**
 
+```bash
+kubectl apply -f lbservice.yaml
 
-    3️⃣ Deploy Application
+# Get external IP
+kubectl get svc <lb_service_name>
+```
 
-    # Create deployment
-      kubectl apply -f deployment.yaml
+Once the **external IP** appears, you can access the app in a browser.
 
-    # Verify pods
-      kubectl get pods
+### **6️⃣ Enable Horizontal Pod Autoscaling**
 
+```bash
+# Ensure Metrics Server is running
+kubectl get deployment metrics-server -n kube-system
+kubectl apply -f hpa.yaml
 
-    4️⃣ Create LoadBalancer Service
+```
 
-    kubectl apply -f lbservice.yaml
+---
 
-    # Get external IP
-    kubectl get svc <lb_service_name>
+## 📈 Validation & Testing
 
-Once the external IP appears, you can access the app in a browser.
+### **Load Testing (BusyBox Method)**
 
-
-    5️⃣ Enable Horizontal Pod Autoscaling
-
-    # Ensure Metrics Server is running
-    kubectl get deployment metrics-server -n kube-system
-
-    # Apply HPA
-    kubectl apply -f hpa.yaml
-
-    # Monitor scaling
-    kubectl get hpa
-
-
-📈 **Validation & Testing**
-
-    1. Load Testing (BusyBox Method)
-
-    kubectl run -it --rm load-generator --image=busybox --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://nodejs-lb; done"
-
-> Replace `nodejs-lb` with your LoadBalancer service name.
-
-    2. Failover Test
-
-    kubectl delete pod <pod_name>
-    kubectl get pods
-
-    Observe Kubernetes automatically recreating the pod.
-
-
-
-
-
+```bash
+kubectl run -it --rm load-generator \
+  --image=busybox \
+  --restart=Never \
+  -- /bin/sh -c "while true; do wget -q -O- http://<load balancer service name>; done"
+```
