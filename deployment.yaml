@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nodejs
 spec:
-  replicas: 1  # Let HPA control scaling
+  replicas: 1
   selector:
     matchLabels:
       app: nodejs
@@ -16,14 +16,15 @@ spec:
     spec:
       containers:
       - name: mywebapp
-        image: reeteshsingh31/nodejs:myfirstimage
+        image: reeteshsingh31/reetesh-privatenodejs:doksimage
         ports:
         - containerPort: 80
         resources:
           requests:
-            cpu: 100m        # Minimum CPU reserved for HPA calculations
+            cpu: 100m
             memory: 100Mi
           limits:
-            cpu: 200m        # Max CPU per pod
+            cpu: 200m
             memory: 200Mi
-
+      imagePullSecrets:
+      - name: regcred
